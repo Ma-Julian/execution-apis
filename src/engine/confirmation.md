@@ -21,7 +21,7 @@ Engine API method that passes the block confirmed by the consensus layer's fast 
 
 The [fast confirmation rule](https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md) lets a consensus layer client confirm a block, usually within one or two slots, under synchrony and honesty assumptions that differ from those behind the existing `safe` and `finalized` tags. The method in this document lets the consensus layer pass that block to the execution layer, which serves it under the `confirmed` block tag of the `eth` namespace.
 
-Support is optional and opt-in on both sides. It is independent of network upgrades: it does not change `ForkchoiceState` or any `engine_forkchoiceUpdated` version, and it does not change the meaning of the `safe` or `finalized` tags. Nodes whose operators do not enable it behave exactly as before.
+Support is optional. An execution layer client that implements the method always accepts it, without any configuration. A consensus layer client calls it only if its operator has enabled it. Support is independent of network upgrades: it does not change `ForkchoiceState` or any `engine_forkchoiceUpdated` version, and it does not change the meaning of the `safe` or `finalized` tags. Nodes whose operators do not enable it behave exactly as before.
 
 ## Methods
 
@@ -41,7 +41,7 @@ Support is optional and opt-in on both sides. It is independent of network upgra
 
 #### Specification
 
-1. Execution layer client software **MAY** support this method. If it does, it **MUST** include `engine_confirmedBlockUpdatedV1` in its [`engine_exchangeCapabilities`](./common.md#engine_exchangecapabilities) response.
+1. Execution layer client software **MAY** support this method. If it does, it **MUST** include `engine_confirmedBlockUpdatedV1` in its [`engine_exchangeCapabilities`](./common.md#engine_exchangecapabilities) response, and **MUST NOT** require any configuration to accept it or to serve the `confirmed` block tag.
 
 2. Consensus layer client software **MUST NOT** call this method unless the node operator has enabled it and the execution layer client has included `engine_confirmedBlockUpdatedV1` in its `engine_exchangeCapabilities` response.
 
@@ -57,7 +57,7 @@ Support is optional and opt-in on both sides. It is independent of network upgra
 
 ## Rationale
 
-- *A separate method instead of a new `ForkchoiceState` field.* `engine_exchangeCapabilities` negotiates methods, not fields. A separate method lets each consensus and execution client pair turn the feature on as soon as both support it, without a new `engine_forkchoiceUpdated` version or a network upgrade, and leaves every other node unchanged.
+- *A separate method instead of a new `ForkchoiceState` field.* `engine_exchangeCapabilities` negotiates methods, not fields. A separate method can always be enabled in execution layer clients that implement it, so only the consensus layer operator has to turn the feature on. It works as soon as both clients support it, without a new `engine_forkchoiceUpdated` version or a network upgrade, and leaves every other node unchanged.
 - *A new tag instead of changing `safe`.* Some applications, RPC providers and layer 2 networks rely on `safe` returning a justified block. A separate tag lets them adopt fast confirmations without breaking those users. Serving both from the same node also requires the consensus layer to send the justified block as `safeBlockHash`, which is outside the scope of this document.
 - *No substitution.* Never answering `confirmed` with another block means that a node which has not enabled the feature, or has just restarted, cannot be mistaken for one that serves fast confirmations.
 - *The confirmed block can move backwards.* The fast confirmation rule falls back to the finalized block when its checks fail. Applications should not treat the highest `confirmed` block they have seen as irreversible.
