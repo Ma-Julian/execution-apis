@@ -14,6 +14,7 @@ Engine API method that passes the block confirmed by the consensus layer's fast 
     - [Response](#response)
     - [Specification](#specification)
 - [Rationale](#rationale)
+- [Open questions](#open-questions)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -61,3 +62,9 @@ Support is optional. An execution layer client that implements the method always
 - *A new tag instead of changing `safe`.* Some applications, RPC providers and layer 2 networks rely on `safe` returning a justified block. A separate tag lets them adopt fast confirmations without breaking those users. Serving both from the same node also requires the consensus layer to send the justified block as `safeBlockHash`, which is outside the scope of this document.
 - *No substitution.* Never answering `confirmed` with another block means that a node which has not enabled the feature, or has just restarted, cannot be mistaken for one that serves fast confirmations.
 - *The confirmed block can move backwards.* The fast confirmation rule falls back to the finalized block when its checks fail. Applications should not treat the highest `confirmed` block they have seen as irreversible.
+
+## Open questions
+
+- *Coupling with `engine_forkchoiceUpdated`.* Rules 3 and 4 tie this method to `engine_forkchoiceUpdated`: the consensus layer calls it only after the `engine_forkchoiceUpdated` call that makes `confirmedBlockHash` an ancestor of the head, and the execution layer rejects a block that is not an ancestor of its current head. Client teams are asked which of these they prefer:
+  - *Strict (current text).* The execution layer never stores a confirmed block outside the canonical chain, and the consensus layer learns about mismatches. The consensus layer must order fast confirmation updates after fork choice updates, and a re-org between the two calls can cause errors that are not real failures.
+  - *Loose.* Drop the ordering requirement in rule 3 and the ancestor check in rule 4. The execution layer accepts any known block and stores it, and rule 6 makes the `confirmed` tag resolve only while that block is in the canonical chain. The two calls become independent, and the execution layer still never serves a block outside the canonical chain. A wrong hash is accepted without an error, and the `confirmed` tag can be briefly unresolvable until the head catches up.
